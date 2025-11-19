@@ -46,6 +46,10 @@ public class CustomEntityRepository {
                     "CREATE INDEX IF NOT EXIST hash_idx_private_chat_id ON message_table USING HASH (chat_id)"
             ).executeUpdate();
 
+            entityManager.createNativeQuery(
+                    "CREATE INDEX IF NOT EXIST idx_private_chat_id ON backup_table (owner_id)"
+            ).executeUpdate();
+
         } catch (Exception e) {
             logger.info(e.getMessage());
         }
