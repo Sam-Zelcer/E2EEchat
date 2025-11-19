@@ -1,4 +1,4 @@
-package sam.dev.E2EEchat.service.pgp;
+package sam.dev.E2EEchat.service.pgp.privateChat;
 
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
-import sam.dev.E2EEchat.repository.dtos.pgp.privateChat.GetPrivateChatsResponse;
 import sam.dev.E2EEchat.repository.dtos.pgp.privateChat.CreatePrivateChatRequest;
 import sam.dev.E2EEchat.repository.dtos.pgp.privateChat.NewPrivateChatResponse;
 import sam.dev.E2EEchat.repository.entitys.pgp.PrivateChat;
@@ -15,16 +14,14 @@ import sam.dev.E2EEchat.repository.pgp.PrivateChatRepository;
 import sam.dev.E2EEchat.repository.user.UserRepository;
 import sam.dev.E2EEchat.service.jwt.JWTService;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 @Service
 @Transactional
 @AllArgsConstructor
-public class PrivateChatService {
+public class CreatePrivateChatService {
 
-    private static final Logger logger = LoggerFactory.getLogger(PrivateChatService.class);
+    private static final Logger logger = LoggerFactory.getLogger(CreatePrivateChatService.class);
 
     private final JWTService jwtService;
     private final UserRepository userRepository;
@@ -33,28 +30,35 @@ public class PrivateChatService {
 
     public String createPrivateChat(CreatePrivateChatRequest request, String authHeader) {
         try {
-            if (
-                            request.getSecondUserNameId().isEmpty() ||
-                            authHeader.isEmpty()
-            ) return "bad request";
+            if (authHeader == null || authHeader.trim().isEmpty() ||
+                    request.getSecondUserNameId() == null || request.getSecondUserNameId().trim().isEmpty()) {
+                return "bad request";
+            }
 
             String[] secondUserNameId = request.getSecondUserNameId().split(":", 2);
+            if (secondUserNameId.length != 2) {
+                return "invalid user format";
+            }
+            Long secondUserId;
+            try {
+                secondUserId = Long.parseLong(secondUserNameId[1]);
+            } catch (Exception e) {
+                return "invalid second user id format";
+            }
 
-            Optional<User> optionalFirstUser = userRepository.findById(
-                    jwtService.extractUsersId(authHeader.substring(7))
-            );
-            Optional<User> optionalSecondUser = userRepository.findById(
-                    Long.parseLong(secondUserNameId[1])
-            );
+            Optional<User> optionalFirstUser;
+            if (authHeader.startsWith("Bearer ") && authHeader.length() > 7) {
+                optionalFirstUser = userRepository.findById(
+                        jwtService.extractUsersId(authHeader.substring(7))
+                );
+            } else return "bad jwt token";
+            if (optionalFirstUser.isEmpty()) return "your account no longer exists";
 
+            Optional<User> optionalSecondUser = userRepository.findById(secondUserId);
             if (
-                    optionalFirstUser.isEmpty() ||
-                            optionalSecondUser.isEmpty() ||
-                            optionalFirstUser.get().getId().equals(Long.parseLong(secondUserNameId[1]))
+                    optionalSecondUser.isEmpty() ||
+                            optionalFirstUser.get().getId().equals(secondUserId)
             ) return "second user was provided incorrectly, or your account no longer exists";
-            if (
-                    secondUserNameId[0].equals(optionalFirstUser.get().getUsername())
-            ) return "you can't create chat with yourself";
             if (
                     privateChatRepository.findExistingPrivateChat(
                             optionalFirstUser.get(),
@@ -80,36 +84,8 @@ public class PrivateChatService {
             return "chat was created";
 
         } catch (Exception e) {
-            logger.info(e.getMessage());
+            logger.error(e.getMessage());
         }
         return "something went wrong";
-   }
-
-    public List<GetPrivateChatsResponse> getChats(String authHeader) {
-        try {
-            if (authHeader.isEmpty()) return Collections.emptyList();
-
-            Optional<User> optionalUser = userRepository.findById(
-                    jwtService.extractUsersId(authHeader.substring(7))
-            );
-            if (optionalUser.isEmpty()) return Collections.emptyList();
-
-            Optional<List<PrivateChat>> privateChats = privateChatRepository
-                    .findUsersPrivateChats(optionalUser.get());
-
-            return privateChats.map(chats -> chats.stream()
-                    .map(
-                            privateChat -> new GetPrivateChatsResponse(
-                                    privateChat.getId(),
-                                    optionalUser.get().equals(privateChat.getFirstUser()) ?
-                                            privateChat.getSecondUser().getUsername() :
-                                            privateChat.getFirstUser().getUsername()
-                            )
-                    ).toList()).orElse(null);
-
-        } catch (Exception e) {
-            logger.info(e.getMessage());
-        }
-        return Collections.emptyList();
     }
 }

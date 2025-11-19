@@ -21,4 +21,6 @@ public interface PublicKeyRepository extends JpaRepository<PublicKey, Long> {
     Optional<PublicKey> findPublicKeyByOwner(
             @Param("user") User user
     );
+
+    void deleteByOwner(User owner);
 }
