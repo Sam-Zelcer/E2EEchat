@@ -1,4 +1,4 @@
-package sam.dev.E2EEchat.service;
+package sam.dev.E2EEchat.service.user;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -6,10 +6,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import sam.dev.E2EEchat.repository.dtos.SignInRequest;
-import sam.dev.E2EEchat.repository.dtos.SignUpRequest;
-import sam.dev.E2EEchat.repository.entitys.UnverifiedUser;
-import sam.dev.E2EEchat.repository.entitys.User;
+import sam.dev.E2EEchat.repository.dtos.auth.SignInRequest;
+import sam.dev.E2EEchat.repository.dtos.auth.SignUpRequest;
+import sam.dev.E2EEchat.repository.entitys.user.UnverifiedUser;
+import sam.dev.E2EEchat.repository.entitys.user.User;
 import sam.dev.E2EEchat.repository.user.UnverifiedUserRepository;
 import sam.dev.E2EEchat.repository.user.UserRepository;
 import sam.dev.E2EEchat.service.email.EmailService;
@@ -52,13 +52,14 @@ public class AuthorizationService {
             user.setEmail(request.getEmail());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setExpiration(LocalDateTime.now().plusMinutes(20));
-            user.setId(unverifiedUserRepository.save(user).getId());
+            user.setCode(100000 + (int)(Math.random() * (999999 - 100000) + 1));
+            unverifiedUserRepository.save(user);
 
             if (
                     emailService.sendMail(
                             request.getEmail(),
                             "verification",
-                            "http://localhost:8080/unauthorized/verification?id="+user.getId()
+                            "http://localhost:8080/unauthorized/verification?code="+user.getCode()
                     )!=200
             ) {
                 logger.info("id --> {}", user.getId());
@@ -69,15 +70,16 @@ public class AuthorizationService {
             return "unverified user was created";
 
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            logger.info(e.getMessage());
         }
+        return "something went wrong";
     }
 
-    public String verification(Long id) {
+    public String verification(Integer code) {
         try {
-            if (id==null) return "you have to provide id";
+            if (code==null) return "you have to provide code";
             Optional<UnverifiedUser> optionalUnverifiedUser = unverifiedUserRepository
-                    .findById(id);
+                    .findUnverifiedUserByCode(code);
             if (optionalUnverifiedUser.isEmpty()) return "this user doesn't exist";
 
             User user = new User();
@@ -85,24 +87,26 @@ public class AuthorizationService {
             user.setEmail(optionalUnverifiedUser.get().getEmail());
             user.setPassword(optionalUnverifiedUser.get().getPassword());
 
-            unverifiedUserRepository.deleteById(id);
+            unverifiedUserRepository.deleteById(optionalUnverifiedUser.get().getId());
             userRepository.save(user);
             return "user was successfully created";
 
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            logger.info(e.getMessage());
         }
+        return "something went wrong";
     }
 
     public String signIn(SignInRequest request) {
+        logger.info("method sign-in start");
         try {
             if (
                     request.getPassword().isEmpty() ||
-                            request.getEmail().isEmpty()
+                            request.getUsername().isEmpty()
             ) return "you have to provide password and email";
 
-            Optional<User> optionalUser = userRepository.findUserByEmail(request.getEmail());
-            if (optionalUser.isEmpty()) return "user with email: "+request.getEmail()+" doesn't exist";
+            Optional<User> optionalUser = userRepository.findUserByUsername(request.getUsername());
+            if (optionalUser.isEmpty()) return "user with username: "+request.getUsername()+" doesn't exist";
 
             if (
                     passwordEncoder.matches(request.getPassword(), optionalUser.get().getPassword())
@@ -111,7 +115,8 @@ public class AuthorizationService {
             return "bad credentials";
 
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            logger.info(e.getMessage());
         }
+        return "something went wrong";
     }
 }

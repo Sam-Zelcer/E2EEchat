@@ -1,4 +1,4 @@
-package sam.dev.E2EEchat.repository.dtos.pgp.publicKey;
+package sam.dev.E2EEchat.repository.dtos.pgp.privateChat;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -7,10 +7,6 @@ import lombok.Data;
 
 @Data
 public class CreatePrivateChatRequest {
-
-    @NotBlank
-    @Size(min = 3, max = 80)
-    private String name;
 
     @NotBlank
     @Pattern(

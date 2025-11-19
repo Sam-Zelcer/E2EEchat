@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class ReturnNewPrivateChat {
+public class NewPrivateChatResponse {
 
     private Long ChatId;
     private String name;

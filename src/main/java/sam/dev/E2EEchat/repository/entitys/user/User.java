@@ -1,6 +1,7 @@
-package sam.dev.E2EEchat.repository.entitys;
+package sam.dev.E2EEchat.repository.entitys.user;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -24,6 +25,10 @@ public class User {
     )
     private Long id;
 
+    @Pattern(
+            regexp = "^[a-zA-Z0-9]+$",
+            message = "Username must contain only letters and numbers"
+    )
     @Column(name = "username", nullable = false, unique = true, length = 80)
     private String username;
 

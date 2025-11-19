@@ -1,4 +1,11 @@
 package sam.dev.E2EEchat.repository.dtos.pgp.publicKey;
 
-public class GetInterlocutorsPublicKey {
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+@Data
+public class GetInterlocutorsPublicKeyRequest {
+
+    @NotNull
+    private Long chatId;
 }

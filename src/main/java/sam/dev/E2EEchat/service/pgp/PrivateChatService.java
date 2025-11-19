@@ -1,14 +1,14 @@
 package sam.dev.E2EEchat.service.pgp;
 
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import sam.dev.E2EEchat.repository.dtos.pgp.privateChat.GetPrivateChatsResponse;
-import sam.dev.E2EEchat.repository.dtos.pgp.publicKey.CreatePrivateChatRequest;
-import sam.dev.E2EEchat.repository.dtos.pgp.privateChat.ReturnNewPrivateChat;
+import sam.dev.E2EEchat.repository.dtos.pgp.privateChat.CreatePrivateChatRequest;
+import sam.dev.E2EEchat.repository.dtos.pgp.privateChat.NewPrivateChatResponse;
 import sam.dev.E2EEchat.repository.entitys.pgp.PrivateChat;
 import sam.dev.E2EEchat.repository.entitys.user.User;
 import sam.dev.E2EEchat.repository.pgp.PrivateChatRepository;
@@ -21,7 +21,7 @@ import java.util.Optional;
 
 @Service
 @Transactional
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class PrivateChatService {
 
     private static final Logger logger = LoggerFactory.getLogger(PrivateChatService.class);
@@ -34,7 +34,6 @@ public class PrivateChatService {
     public String createPrivateChat(CreatePrivateChatRequest request, String authHeader) {
         try {
             if (
-                    request.getName().isEmpty() ||
                             request.getSecondUserNameId().isEmpty() ||
                             authHeader.isEmpty()
             ) return "bad request";
@@ -51,7 +50,7 @@ public class PrivateChatService {
             if (
                     optionalFirstUser.isEmpty() ||
                             optionalSecondUser.isEmpty() ||
-                            optionalSecondUser.get().getId().equals(Long.parseLong(secondUserNameId[1]))
+                            optionalFirstUser.get().getId().equals(Long.parseLong(secondUserNameId[1]))
             ) return "second user was provided incorrectly, or your account no longer exists";
             if (
                     secondUserNameId[0].equals(optionalFirstUser.get().getUsername())
@@ -70,12 +69,12 @@ public class PrivateChatService {
 
             simpMessagingTemplate.convertAndSend(
                     "/topic/chat/get-chats/"+chat.getFirstUser().getId(),
-                    new ReturnNewPrivateChat(chat.getId(), chat.getSecondUser().getUsername()
+                    new NewPrivateChatResponse(chat.getId(), chat.getSecondUser().getUsername()
                     )
             );
             simpMessagingTemplate.convertAndSend(
                     "/topic/chat/get-chats/"+chat.getSecondUser().getId(),
-                    new ReturnNewPrivateChat(chat.getId(), chat.getFirstUser().getUsername()
+                    new NewPrivateChatResponse(chat.getId(), chat.getFirstUser().getUsername()
                     )
             );
             return "chat was created";

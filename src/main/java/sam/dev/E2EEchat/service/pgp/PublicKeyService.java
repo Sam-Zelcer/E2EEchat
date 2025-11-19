@@ -5,9 +5,12 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import sam.dev.E2EEchat.repository.dtos.pgp.publicKey.GetInterlocutorsPublicKeyRequest;
 import sam.dev.E2EEchat.repository.dtos.pgp.publicKey.SavePublicKeyRequest;
+import sam.dev.E2EEchat.repository.entitys.pgp.PrivateChat;
 import sam.dev.E2EEchat.repository.entitys.pgp.PublicKey;
 import sam.dev.E2EEchat.repository.entitys.user.User;
+import sam.dev.E2EEchat.repository.pgp.PrivateChatRepository;
 import sam.dev.E2EEchat.repository.pgp.PublicKeyRepository;
 import sam.dev.E2EEchat.repository.user.UserRepository;
 import sam.dev.E2EEchat.service.jwt.JWTService;
@@ -25,6 +28,7 @@ public class PublicKeyService {
     private final PublicKeyRepository publicKeyRepository;
     private final JWTService jwtService;
     private final UserRepository userRepository;
+    private final PrivateChatRepository privateChatRepository;
 
     public String savePublicKey(SavePublicKeyRequest request, String authHeader) {
         try {
@@ -49,5 +53,24 @@ public class PublicKeyService {
             logger.info(e.getMessage());
         }
         return "something want wrong";
+    }
+
+    public String getInterlocutorsPublicKey(GetInterlocutorsPublicKeyRequest request, String authHeader) {
+        if (request.getChatId()==null || authHeader.isEmpty()) return "bad request";
+
+        Optional<PrivateChat> optionalPrivateChat = privateChatRepository.findById(request.getChatId());
+        Optional<User> optionalUser = userRepository.findById(
+                jwtService.extractUsersId(authHeader.substring(7))
+        );
+        if (optionalUser.isEmpty() || optionalPrivateChat.isEmpty()) return "this chat doesn't exists, or your account no longer exists";
+
+        String publicKey = "";
+        if (optionalUser.get().equals(optionalPrivateChat.get().getFirstUser())) {
+            publicKey = publicKeyRepository.findPublicKeyByOwner(optionalPrivateChat.get().getSecondUser()).toString();
+        } else if (optionalUser.get().equals(optionalPrivateChat.get().getSecondUser())) {
+            publicKey = publicKeyRepository.findPublicKeyByOwner(optionalPrivateChat.get().getFirstUser()).toString();
+        }
+        if (publicKey.isEmpty()) return "something went wrong";
+        return publicKey;
     }
 }

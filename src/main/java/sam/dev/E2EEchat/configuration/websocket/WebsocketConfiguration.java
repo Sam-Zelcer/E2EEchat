@@ -1,7 +1,8 @@
-package sam.dev.E2EEchat.configuration;
+package sam.dev.E2EEchat.configuration.websocket;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -11,6 +12,13 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
 public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer {
+
+    private final WebsocketJWTInterceptor websocketJWTInterceptor;
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(websocketJWTInterceptor);
+    }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {

@@ -1,4 +1,4 @@
-package sam.dev.E2EEchat.repository.entitys;
+package sam.dev.E2EEchat.repository.entitys.user;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
